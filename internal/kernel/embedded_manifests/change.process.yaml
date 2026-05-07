@@ -1,0 +1,96 @@
+apiVersion: graph-harness.kernel/v1
+kind: Layer
+metadata:
+  name: change.process
+  version: 0.1.0
+  depends_on:
+    - code.core@^0.1.0
+    - semantic.overlay@^0.1.0
+  description: >
+    Per-change validation pipeline (12 stages, idempotent at seq). Produces
+    ValidationFinding and RepairInstruction events. Phase 0 emits one finding
+    type (flow_unreviewed) with empty repair payload; full RepairInstruction
+    synthesis lands in P3.
+
+schema:
+  entity_kinds:
+    - name: Diff
+      attributes:
+        sha:         { type: string, indexed: true }
+        validation_seq: { type: int, indexed: true }
+    - name: TouchedRegion
+      attributes:
+        file_path:    { type: path, indexed: true }
+        hunk_range:   { type: opaque_blob, indexed: false }
+        entity_ref:   { type: entity_ref(self), indexed: false }
+    - name: ValidationFinding
+      attributes:
+        kind:        { type: string, indexed: true }
+        severity:    { type: enum,   indexed: true }
+        subject:     { type: selector, indexed: false }
+        evidence:    { type: opaque_blob, indexed: false }
+        repair:      { type: opaque_blob, indexed: false }
+    - name: RepairInstruction      # P3 — declarable in P0, empty payload
+      attributes:
+        finding:    { type: entity_ref(self), indexed: true }
+        steps:      { type: opaque_blob, indexed: false }
+    - name: RequiredCheck
+      attributes:
+        command: { type: string, indexed: false }
+    - name: ExecutionTrace
+      attributes:
+        finding: { type: entity_ref(self), indexed: true }
+        outcome: { type: enum, indexed: true }
+  relation_kinds:
+    - name: produces_finding
+      from: Diff
+      to:   ValidationFinding
+      attributes: {}
+    - name: touches
+      from: Diff
+      to:   TouchedRegion
+      attributes: {}
+
+capabilities:
+  - kv_lookup_by_id
+  - filter_by_attribute:
+      fields: [kind, severity, validation_seq]
+      ops: [eq]
+  - as_of_seq_read
+  - streaming_subscribe
+
+events:
+  emits:
+    - ValidationFinding
+    - ValidateDiffResult
+    - RepairInstruction            # P3 — emitted with empty payload in P0
+    - RepairExecutionTrace         # P3
+
+storage:
+  adapter: sqlite
+  durability: persistent
+  mutability: append_only           # session-scoped; never mutated
+
+snapshot:
+  supports_as_of_seq: true
+  strategy: event_replay
+  retention:
+    events: 100000
+    duration: "168h"                # 7d; per-change records are short-lived
+
+trust:
+  direct_writes_from:
+    - kernel_replay
+    - layer:change.process
+  review_required_from: []
+  forbidden_from:
+    - user
+    - agent
+
+sync:
+  mode: local_only                  # default; push_authoritative in cloud mode
+
+freshness_states:
+  - immutable
+  - revoked
+  - superseded

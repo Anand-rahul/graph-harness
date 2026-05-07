@@ -1,0 +1,72 @@
+# Binaries / build output
+/bin/
+/dist/
+/build/
+*.exe
+*.test
+*.out
+*.prof
+/graph-harness
+/graph-harness-*
+
+# Go module / coverage / cache
+go.work
+go.work.sum
+coverage.txt
+coverage.html
+profile.cov
+*.coverprofile
+
+# Local SQLite event log + WAL companions
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-journal
+
+# Workspace runtime state
+*/.graph-harness/
+!templates/.graph-harness/
+
+# VS Code extension build artifacts
+ext/vscode/node_modules/
+ext/vscode/dist/
+ext/vscode/out/
+ext/vscode/*.vsix
+ext/vscode/.vscode-test/
+
+# Studio frontend build (when added)
+internal/studio/spa/dist/
+internal/studio/spa/node_modules/
+
+# Editor / IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Direnv / local env
+.envrc
+.env
+.env.local
+
+# Vendored deps (we don't vendor by default)
+/vendor/
+
+# gotit JSONL run logs
+tests/e2e/results/
+
+# Temp / scratch
+/tmp/
+/.cache/
+*.log
+
+# internal
+/plan/
+/site/
+.claude/

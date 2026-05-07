@@ -1,0 +1,39 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gosec
+    - revive
+    - misspell
+    - unconvert
+    - sqlclosecheck
+  settings:
+    govet:
+      disable:
+        - structtag           # Participle uses non-standard tag DSL
+  exclusions:
+    paths:
+      - tests/testdata
+      - internal/studio/spa
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+
+formatters:
+  enable:
+    - gofumpt
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

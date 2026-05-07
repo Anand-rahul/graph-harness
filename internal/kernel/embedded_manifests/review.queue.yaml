@@ -1,0 +1,90 @@
+apiVersion: graph-harness.kernel/v1
+kind: Layer
+metadata:
+  name: review.queue
+  version: 0.1.0
+  depends_on:
+    - semantic.overlay@^0.1.0
+  description: >
+    Proposal lifecycle layer. Mediates writes from non-trusted sources
+    (agents, importers) into authoritative layers. Phase 0 ships a working
+    subset of the state machine: submitted | pending_review | accepted |
+    rejected | promoted. Full 9-state machine + per-layer promotion modes
+    land in P4.
+
+schema:
+  entity_kinds:
+    - name: Proposal
+      attributes:
+        target_layer: { type: string, indexed: true }
+        kind:         { type: string, indexed: true }     # selector|flow|invariant|...
+        author:       { type: string, indexed: true }     # user|agent:<name>
+        state:        { type: enum,   indexed: true }
+        payload:      { type: opaque_blob, indexed: false }
+    - name: ReviewItem
+      attributes:
+        proposal:     { type: entity_ref(self), indexed: true }
+        assigned_to:  { type: string, indexed: true }
+    - name: ProposalConflict       # selector-overlap in P0; full set in P3
+      attributes:
+        proposals: { type: list<string>, indexed: false }
+        kind:      { type: enum, indexed: true }          # selector_overlap|invariant_contradiction
+  relation_kinds:
+    - name: supersedes
+      from: Proposal
+      to:   Proposal
+      attributes: {}
+
+capabilities:
+  - kv_lookup_by_id
+  - filter_by_attribute:
+      fields: [state, target_layer, author]
+      ops: [eq]
+  - streaming_subscribe
+
+events:
+  emits:
+    - ProposalSubmitted
+    - ProposalAccepted
+    - ProposalRejected
+    - ProposalPromoted
+    - ProposalConflict
+
+storage:
+  adapter: sqlite
+  durability: persistent
+  mutability: append_only           # state changes are events, not mutations
+
+snapshot:
+  supports_as_of_seq: true
+  strategy: event_replay
+  retention:
+    events: 100000
+    duration: "8760h"               # 1y; review history is durable
+
+# v1 default for P0: every layer's promotion is human-only. Per-layer modes
+# (auto_with_evidence, auto_promote, etc.) declared in target manifests
+# arrive in P4.
+promotion_mode: human_only
+
+trust:
+  direct_writes_from:
+    - layer:semantic.overlay        # internal state machine writes
+    - kernel_replay
+  review_required_from:
+    - agent
+    - importer
+  forbidden_from: []
+
+sync:
+  mode: bidirectional_with_review   # team coordination (SPEC §6.6)
+  conflict_resolution: review_required
+
+freshness_states:
+  - pending
+  - accepted
+  - accepted_with_edits
+  - rejected
+  - deferred
+  - needs_evidence
+  - resolved

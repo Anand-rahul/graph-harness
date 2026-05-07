@@ -1,0 +1,20 @@
+// templates/overlay.example.gh — canonical Phase-0 demo fixture.
+// Used by:
+//   - the demo script in plan/00-tracer-zero.md §4
+//   - tests/smoke/p0/run.sh (P0.T49)
+//   - the README quickstart (P0.T50)
+//
+// Authors a single selector + flow over a hypothetical CheckoutValidator.
+// Phase 0 selector resolution is single-anchor (qualified_name only); the
+// fallback ladder + multi-anchor first-class arrives in P3.
+
+selector CheckoutValidator {
+  unique
+  anchor qualified_name "CheckoutValidator.Validate"
+}
+
+flow CheckoutValidation {
+  description "Pre-payment cart validation"
+  scope CheckoutValidator
+  step ValidateCart targets selector { qualified_name "CheckoutValidator.Validate" }
+}

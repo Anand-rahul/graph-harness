@@ -1,0 +1,99 @@
+apiVersion: graph-harness.kernel/v1
+kind: Layer
+metadata:
+  name: semantic.overlay
+  version: 0.1.0
+  depends_on:
+    - code.core@^0.1.0
+  description: >
+    Authored durable semantics: Flow, Invariant, Control, Skill, Selector,
+    Runbook, Risk label, Boundary, Ownership hint. Source-of-truth is
+    .graph-harness/overlay/**/*.gh on disk (git-tracked); SQLite is the
+    index. Phase 0 ships flows + selectors with single-anchor resolution
+    (multi-anchor lands in P3).
+
+schema:
+  entity_kinds:
+    - name: Selector
+      attributes:
+        name:        { type: string, indexed: true }
+        cardinality: { type: enum,   indexed: false }      # one|many
+        anchors:     { type: opaque_blob, indexed: false } # JSON AST
+    - name: Flow
+      attributes:
+        name:        { type: string, indexed: true }
+        description: { type: string, indexed: false }
+        risk:        { type: enum,   indexed: true }       # low|medium|high|critical
+        scope:       { type: selector, indexed: false }
+    - name: Invariant            # P3 — declarable in P0 but minimally enforced
+      attributes:
+        name:      { type: string, indexed: true }
+        type:      { type: enum,   indexed: true }
+        severity:  { type: enum,   indexed: true }
+        statement: { type: string, indexed: false }
+    - name: Control              # P3
+      attributes:
+        name:         { type: string, indexed: true }
+        applies_to:   { type: selector, indexed: false }
+        triggers:     { type: list<string>, indexed: false }
+        default_mode: { type: enum, indexed: false }
+    - name: Skill                # P3
+      attributes:
+        name: { type: string, indexed: true }
+  relation_kinds:
+    - name: flow_step
+      from: Flow
+      to:   Selector
+      attributes:
+        order: { type: int, indexed: false }
+        name:  { type: string, indexed: false }
+
+capabilities:
+  - kv_lookup_by_id
+  - filter_by_attribute:
+      fields: [name, risk]
+      ops: [eq, prefix]
+  - selector_match:
+      families: [nominal, semantic]
+  - as_of_seq_read
+  - streaming_subscribe
+
+events:
+  emits:
+    - OverlayItemImported
+    - OverlayItemUpdated
+    - OverlayItemRemoved
+    - SelectorResolutionInvalidated
+
+storage:
+  adapter: filesystem            # canonical .gh on disk; SQLite indexes alongside
+  durability: persistent
+  mutability: authored
+
+snapshot:
+  supports_as_of_seq: true
+  strategy: external_source       # source files are the canonical state
+  retention:
+    events: 100000
+    duration: "8760h"             # 1y; longer than code.core because authored
+
+trust:
+  direct_writes_from:
+    - importer:gh_filesystem
+    - kernel_replay
+  review_required_from:
+    - agent                        # MCP propose_overlay_update → review queue
+  forbidden_from: []
+
+sync:
+  mode: bidirectional_with_review  # the durable team asset (SPEC §6.6)
+  conflict_resolution: review_required
+  peer: graph-harness.team-store/v1
+
+freshness_states:
+  - bound
+  - reanchored
+  - possibly_stale
+  - stale
+  - unresolved
+  - superseded

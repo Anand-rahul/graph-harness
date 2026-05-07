@@ -1,0 +1,19 @@
+# Feature-flag allowlist for gotit specs.
+# Override via env: GRAPH_HARNESS_E2E_FEATURES=foo,bar  (or =all)
+# Unknown flags evaluate to false (skip).
+
+enabled:
+  # ---- Phase 0 sub-flags ----
+  p0-named-pipe:           false   # Windows daemon socket; soft-gated in P0
+  p0-vscode-extension:     false   # vsce required; gate when authoring runs in CI
+
+  # ---- Cross-phase gating (flip in the PR that ships the feature) ----
+  p1-multi-language:       false
+  p2-framework-extractors: false
+  p3-rule-engine:          false
+  p3-repair-instructions:  false
+  p4-full-review-states:   false
+  p5-history-evolution:    false
+  p6-perf-bench:           false
+  p6-publish:              false
+  p6-hidden-corpus:        false

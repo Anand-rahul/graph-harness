@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://github.com/shivamstaq/gotit/raw/main/schema/spec.schema.json
+spec_version: 1
+name: mcp-tools-list-exposes-curated-surface
+description: 'JSON-RPC `tools/list` over `graph-harness mcp` stdio returns the four curated Phase-0 tools (explore, validate_diff, get_context, query).'
+tags: [boilerplate, surfaces, mcp, p0t45]
+order: 62
+repo:
+  helper: go-module-empty
+
+steps:
+  - name: tools_list_via_stdio
+    command: sh -c 'echo "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}" | graph-harness mcp'
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: '"explore"' }
+      - { type: contains, value: '"validate_diff"' }
+      - { type: contains, value: '"get_context"' }
+      - { type: contains, value: '"query"' }

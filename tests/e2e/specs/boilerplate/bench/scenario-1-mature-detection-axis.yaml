@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://github.com/shivamstaq/gotit/raw/main/schema/spec.schema.json
+spec_version: 1
+name: bench-scenario-1-mature-detection-axis
+description: '`graph-harness bench --scenario 1 --regime mature` scores 1.0 on detection; other axes report N/A pending P3 repair synthesis.'
+tags: [boilerplate, bench, p0t48]
+order: 80
+requires:
+  - cgo
+  - tree-sitter
+repo:
+  helper: go-module-with-checkout-validator
+
+setup:
+  - name: init
+    command: graph-harness init
+    assert:
+      - { type: exit_code, expected: 0 }
+  - name: install_overlay
+    command: sh -c "mkdir -p .graph-harness/overlay && cp demo.checkout.gh .graph-harness/overlay/checkout.gh"
+    assert:
+      - { type: exit_code, expected: 0 }
+
+steps:
+  - name: bench_runs
+    command: graph-harness bench --scenario 1 --regime mature
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: json_path, path: "$.scenario.id", op: "==", expected: 1 }
+      - { type: json_path, path: "$.scenario.regime", op: "==", expected: "mature" }
+      - { type: json_path, path: "$.detection_axis.score", op: "==", expected: 1 }
+      - { type: json_path, path: "$.repair_quality.score", op: "==", expected: -1 }

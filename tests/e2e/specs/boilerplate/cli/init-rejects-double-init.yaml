@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://github.com/shivamstaq/gotit/raw/main/schema/spec.schema.json
+spec_version: 1
+name: init-rejects-double-init
+description: 'Running `graph-harness init` twice fails fast — the workspace state dir is the source of truth and is not silently overwritten.'
+tags: [boilerplate, cli, init, p0t49]
+order: 31
+repo:
+  helper: go-module-empty
+
+steps:
+  - name: first_init
+    command: graph-harness init
+    assert:
+      - { type: exit_code, expected: 0 }
+  - name: second_init_fails
+    command: graph-harness init
+    assert:
+      - { type: exit_code, expected: 1 }
+      - { type: stderr_contains, value: "already initialized" }

@@ -1,0 +1,64 @@
+apiVersion: graph-harness.kernel/v1
+kind: Layer
+metadata:
+  name: bench.oracle
+  version: 0.1.0
+  depends_on: []                    # independent of bench.scenarios AND production layers
+  description: >
+    Ground-truth expected findings for benchmark scenarios. Per plan §P0.T46,
+    bench.oracle has ZERO kernel write paths into production layers — the
+    runner reads oracle data and compares to change.process output, but
+    oracle facts can never contaminate code.core / semantic.overlay /
+    review.queue.
+
+schema:
+  entity_kinds:
+    - name: ExpectedFinding
+      attributes:
+        scenario_id: { type: int, indexed: true }
+        kind:        { type: string, indexed: true }
+        severity:    { type: enum,   indexed: true }
+        subject:     { type: selector, indexed: false }
+        evidence:    { type: opaque_blob, indexed: false }
+    - name: ExpectedRepair
+      attributes:
+        scenario_id: { type: int, indexed: true }
+        finding:     { type: entity_ref(self), indexed: true }
+        steps:       { type: opaque_blob, indexed: false }
+  relation_kinds: []
+
+capabilities:
+  - kv_lookup_by_id
+  - filter_by_attribute:
+      fields: [scenario_id, kind, severity]
+      ops: [eq]
+
+events:
+  emits:
+    - OracleEntryRegistered
+
+storage:
+  adapter: sqlite
+  durability: persistent
+  mutability: authored
+
+snapshot:
+  supports_as_of_seq: false
+  strategy: external_source
+  retention:
+    events: 0
+    duration: "0h"
+
+# Hard isolation: no production layer may write here, AND oracle writes never
+# leave the layer. The runner reads, compares, scores. That is all.
+trust:
+  direct_writes_from:
+    - importer:bench_oracle
+  review_required_from: []
+  forbidden_from:
+    - user
+    - agent
+    - kernel_replay                 # explicit: oracle is not replayed from kernel events
+
+sync:
+  mode: local_only

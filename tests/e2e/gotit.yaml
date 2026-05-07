@@ -1,0 +1,7 @@
+binary_name: graph-harness
+build_path: ./cmd/graph-harness
+env_prefix: GRAPH_HARNESS
+specs_dir: tests/e2e/specs
+fixtures_dir: tests/e2e/testdata/repos
+features_file: tests/e2e/features.yaml
+results_dir: tests/e2e/results

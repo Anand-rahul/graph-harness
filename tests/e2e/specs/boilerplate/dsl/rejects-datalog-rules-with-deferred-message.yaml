@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://github.com/shivamstaq/gotit/raw/main/schema/spec.schema.json
+spec_version: 1
+name: dsl-rejects-datalog-rules-with-deferred-message
+description: 'Phase-0 DSL accepts selector / flow / query / import; rejects Datalog `rule … :- …` with a clear deferred-to-P3 message.'
+tags: [boilerplate, dsl, p0t15]
+order: 40
+repo:
+  helper: go-module-empty
+
+setup:
+  - name: init_workspace
+    command: graph-harness init
+    assert:
+      - { type: exit_code, expected: 0 }
+
+steps:
+  - name: query_accepts_selector
+    command: graph-harness query 'selector S { unique anchor qualified_name "x.Y" }'
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: "canonical_gh" }
+
+  - name: query_rejects_datalog_rule
+    command: graph-harness query 'rule reaches(F) :- entity(F, "Function").'
+    assert:
+      - { type: exit_code, expected: 1 }
+      - { type: stderr_contains, value: "datalog rules deferred to P3" }

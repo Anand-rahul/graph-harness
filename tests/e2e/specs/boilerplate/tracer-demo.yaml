@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://github.com/shivamstaq/gotit/raw/main/schema/spec.schema.json
+spec_version: 1
+name: tracer-demo
+description: 'Capstone end-to-end demo (plan §4): init → overlay → selectors test bound → validate-diff emits one flow_unreviewed finding.'
+tags: [boilerplate, demo, capstone, p0t49]
+order: 100
+requires:
+  - cgo
+  - tree-sitter
+repo:
+  helper: go-module-with-checkout-validator
+
+setup:
+  - name: init_workspace
+    command: graph-harness init
+    assert:
+      - { type: exit_code, expected: 0 }
+  - name: install_overlay
+    command: sh -c "mkdir -p .graph-harness/overlay && cp demo.checkout.gh .graph-harness/overlay/checkout.gh"
+    assert:
+      - { type: exit_code, expected: 0 }
+
+steps:
+  - name: selectors_test_bound
+    command: graph-harness selectors test CheckoutValidator
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: "outcome:    bound" }
+      - { type: contains, value: "matches:    1" }
+      - { type: contains, value: "checkout.CheckoutValidator.Validate" }
+
+  - name: flows_list_shows_authored
+    command: graph-harness flows list
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: "CheckoutValidation" }
+
+  - name: validate_diff_emits_finding
+    command: graph-harness validate-diff --diff demo.diff
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: "1 findings" }
+      - { type: contains, value: "flow_unreviewed" }
+      - { type: contains, value: "checkout.CheckoutValidator.Validate" }
+      - { type: contains, value: "CheckoutValidation" }
+
+  - name: validate_diff_json_shape
+    command: graph-harness validate-diff --diff demo.diff --json
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: json_path, path: "$.findings[0].kind", op: "==", expected: "flow_unreviewed" }
+      - { type: json_path, path: "$.findings[0].severity", op: "==", expected: "medium" }
+      - { type: json_path, path: "$.findings[0].subject.flow", op: "==", expected: "CheckoutValidation" }
+
+  - name: validate_diff_idempotent
+    command: graph-harness validate-diff --diff demo.diff --json
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: json_path, path: "$.findings[0].kind", op: "==", expected: "flow_unreviewed" }
+
+  - name: empty_diff_no_findings
+    command: sh -c "echo '' | graph-harness validate-diff"
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: "0 findings" }

@@ -1,0 +1,57 @@
+apiVersion: graph-harness.kernel/v1
+kind: Layer
+metadata:
+  name: code.framework
+  version: 0.1.0
+  depends_on:
+    - code.core@^0.1.0
+  description: >
+    Framework / app enrichment over code.core (Route, Handler, Mutation,
+    Event publisher/subscriber, Job, Queue consumer, Schema field, Migration,
+    Fixture, Contract test). Phase 0 ships the layer registered with no
+    extractors yet — installs cleanly, accepts no events, returns empty
+    results. Per-framework Go extractors land in P2.
+
+schema:
+  entity_kinds: []
+  relation_kinds: []
+
+capabilities:
+  - kv_lookup_by_id
+  - filter_by_attribute:
+      fields: []
+      ops: [eq]
+
+events:
+  emits: []                     # populated in P2 when extractors land
+
+storage:
+  adapter: sqlite
+  durability: persistent
+  mutability: derived
+
+snapshot:
+  supports_as_of_seq: true
+  strategy: event_replay
+  retention:
+    events: 100000
+    duration: "720h"
+
+trust:
+  direct_writes_from:
+    - kernel_replay
+    - layer:code.core
+    - extractor:framework       # plugins (P2)
+  review_required_from: []
+  forbidden_from:
+    - user
+    - agent
+
+sync:
+  mode: local_only              # per-workspace (SPEC §6.6)
+
+freshness_states:
+  - current
+  - partial
+  - dirty
+  - stale

@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://github.com/shivamstaq/gotit/raw/main/schema/spec.schema.json
+spec_version: 1
+name: cli-help-lists-every-subcommand
+description: '`graph-harness --help` is the discoverability surface; lists every Phase-0 subcommand.'
+tags: [boilerplate, cli, p0t04]
+order: 10
+repo:
+  helper: go-module-empty
+
+steps:
+  - name: help_output
+    command: graph-harness --help
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: "daemon" }
+      - { type: contains, value: "query" }
+      - { type: contains, value: "selectors" }
+      - { type: contains, value: "flows" }
+      - { type: contains, value: "validate-diff" }
+      - { type: contains, value: "repl" }
+      - { type: contains, value: "tui" }
+      - { type: contains, value: "studio" }
+      - { type: contains, value: "status" }
+      - { type: contains, value: "layers" }
+      - { type: contains, value: "review" }
+      - { type: contains, value: "bench" }
+      - { type: contains, value: "init" }
+      - { type: contains, value: "version" }
+      - { type: contains, value: "mcp" }

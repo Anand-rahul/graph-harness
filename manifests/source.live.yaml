@@ -1,0 +1,58 @@
+apiVersion: graph-harness.kernel/v1
+kind: Layer
+metadata:
+  name: source.live
+  version: 0.1.0
+  depends_on: []          # leaf layer; emits raw extractor facts
+  description: >
+    Live extractor facts from LSP, filesystem, parser snapshots, diagnostics,
+    and watcher events. Phase 0 ships tree-sitter (Go) only; LSP + SCIP
+    join in P1.
+
+# Empty in P0 — raw events carry payload schemas inline; structured kinds
+# arrive when the three-source unification is wired up (P1).
+schema:
+  entity_kinds: []
+  relation_kinds: []
+
+capabilities:
+  - kv_lookup_by_id
+  - streaming_subscribe
+
+events:
+  emits:
+    - FileChanged
+    - FileParsed
+    - SymbolDisambiguation   # P1: emitted when LSP/SCIP/tree-sitter disagree
+
+storage:
+  adapter: in_memory       # plus WAL spill; ephemeral by design
+  durability: ephemeral
+  mutability: append_only
+
+snapshot:
+  supports_as_of_seq: false
+  strategy: external_source
+  retention:
+    events: 0              # never compacted into snapshots; raw stream only
+    duration: "0h"
+
+trust:
+  direct_writes_from:
+    - extractor:tree_sitter
+    - extractor:lsp        # P1
+    - extractor:scip       # P1
+    - kernel_replay
+  review_required_from: []
+  forbidden_from:
+    - user
+    - agent
+
+sync:
+  mode: local_only         # never synced (SPEC §6.6)
+
+freshness_states:
+  - live
+  - cached
+  - dirty
+  - unavailable

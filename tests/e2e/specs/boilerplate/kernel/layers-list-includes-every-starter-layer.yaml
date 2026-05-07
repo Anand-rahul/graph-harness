@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://github.com/shivamstaq/gotit/raw/main/schema/spec.schema.json
+spec_version: 1
+name: layers-list-includes-every-starter-layer
+description: '`graph-harness layers list --json` enumerates the nine SPEC §2.3 starter layers in topological install order.'
+tags: [boilerplate, kernel, layers, p0t14]
+order: 50
+repo:
+  helper: go-module-empty
+
+steps:
+  - name: layers_list_json
+    command: graph-harness layers list --json
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: count, path: "$", op: ">=", expected: 9 }
+      - { type: contains, value: "source.live" }
+      - { type: contains, value: "code.core" }
+      - { type: contains, value: "semantic.overlay" }
+      - { type: contains, value: "change.process" }
+      - { type: contains, value: "review.queue" }
+      - { type: contains, value: "code.framework" }
+      - { type: contains, value: "history.evolution" }
+      - { type: contains, value: "bench.scenarios" }
+      - { type: contains, value: "bench.oracle" }

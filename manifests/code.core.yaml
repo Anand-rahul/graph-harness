@@ -1,0 +1,96 @@
+apiVersion: graph-harness.kernel/v1
+kind: Layer
+metadata:
+  name: code.core
+  version: 0.1.0
+  depends_on:
+    - source.live@^0.1.0
+  description: >
+    Normalized language-level code graph derived from source.live. v1 unifies
+    LSP + SCIP + tree-sitter facts into content-addressable entities; Phase 0
+    is single-source (tree-sitter) per plan §P0.T21. Three-source unification
+    lands in P1.
+
+schema:
+  entity_kinds:
+    - name: File
+      attributes:
+        path:        { type: path,   indexed: true }
+        language_id: { type: string, indexed: true }
+    - name: Function
+      attributes:
+        qualified_name:       { type: string, indexed: true }
+        normalized_signature: { type: string, indexed: true }
+        language_id:          { type: string, indexed: true }
+        body_hash:            { type: string, indexed: false }
+    - name: Method
+      attributes:
+        qualified_name:       { type: string, indexed: true }
+        receiver:             { type: string, indexed: true }
+        method_name:          { type: string, indexed: true }
+        normalized_signature: { type: string, indexed: false }
+        language_id:          { type: string, indexed: true }
+    - name: TypeDecl
+      attributes:
+        qualified_name: { type: string, indexed: true }
+        kind_tag:       { type: enum,   indexed: true }      # struct|interface|alias
+        language_id:    { type: string, indexed: true }
+  relation_kinds:
+    - name: calls
+      from: Function
+      to:   Function
+      attributes: {}
+    - name: references
+      from: Function
+      to:   Function
+      attributes: {}
+
+capabilities:
+  - kv_lookup_by_id
+  - filter_by_attribute:
+      fields: [qualified_name, language_id, path]
+      ops: [eq, prefix, glob]
+  - traversal:
+      edge_kinds: [calls, references]
+      max_depth: 8
+  - selector_match:
+      families: [structural, nominal, signature, kindwise, relational]
+  - as_of_seq_read
+  - streaming_subscribe
+  - batch_ingest
+
+events:
+  emits:
+    - EntityMaterialized
+    - EntitySuperseded         # rename / signature change → new ID + supersession
+    - SymbolDisambiguation     # populated in P1 when LSP/SCIP/tree-sitter disagree
+
+storage:
+  adapter: sqlite
+  durability: persistent
+  mutability: derived
+
+snapshot:
+  supports_as_of_seq: true
+  strategy: event_replay
+  retention:
+    events: 100000
+    duration: "720h"            # 30 days
+
+trust:
+  direct_writes_from:
+    - kernel_replay
+    - layer:source.live
+  review_required_from: []
+  forbidden_from:
+    - user
+    - agent
+
+sync:
+  mode: local_only              # per-workspace (SPEC §6.6)
+
+freshness_states:
+  - current
+  - building
+  - dirty
+  - stale

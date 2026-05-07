@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://github.com/shivamstaq/gotit/raw/main/schema/spec.schema.json
+spec_version: 1
+name: init-scaffolds-workspace-state-dir
+description: '`graph-harness init` creates `.graph-harness/{overlay,policies,graph-harness.toml}` and reports workspace + daemon paths.'
+tags: [boilerplate, cli, init, p0t49]
+order: 30
+repo:
+  helper: go-module-empty
+
+steps:
+  - name: init_creates_dir
+    command: graph-harness init
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: ".graph-harness" }
+      - { type: contains, value: "Workspace ID" }
+      - { type: contains, value: "Event log" }
+  - name: status_after_init
+    command: graph-harness status
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: "Workspace ID:" }
+      - { type: contains, value: "Last seq:" }

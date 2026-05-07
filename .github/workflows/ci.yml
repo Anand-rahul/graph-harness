@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Run CI pipeline
+        run: just ci
+
+  # Windows is soft-gated per plan/00-tracer-zero.md §3.G.3 — the named-pipe
+  # daemon path is verified locally; CI breakage on Windows is allowed in P0
+  # and hardened to a hard-gate at P6.
+  # windows:
+  #   name: build (windows-latest, soft-gated)
+  #   runs-on: windows-latest
+  #   continue-on-error: true
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Set up Go
+  #       uses: actions/setup-go@v5
+  #       with:
+  #         go-version-file: go.mod
+  #         cache: true
+
+  #     - name: Build
+  #       run: go build ./...

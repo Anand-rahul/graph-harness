@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=https://github.com/shivamstaq/gotit/raw/main/schema/spec.schema.json
+spec_version: 1
+name: review-queue-submit-list-accept-roundtrip
+description: 'Phase-0 review state machine: submit (pending_review) → list → accept transitions a proposal cleanly.'
+tags: [boilerplate, review-queue, p0t40]
+order: 70
+repo:
+  helper: go-module-empty
+
+setup:
+  - name: init_workspace
+    command: graph-harness init
+    assert:
+      - { type: exit_code, expected: 0 }
+
+steps:
+  - name: review_list_empty
+    command: graph-harness review list
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: "no proposals" }
+
+  - name: submit_proposal
+    command: graph-harness review submit --layer semantic.overlay --kind selector --author "agent:test" --payload "{}"
+    capture:
+      proposal_id: "regex:^(prop_[a-f0-9]+)"
+    assert:
+      - { type: exit_code, expected: 0 }
+
+  - name: review_list_shows_pending
+    command: graph-harness review list
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: "pending_review" }
+      - { type: contains, value: "{{ proposal_id }}" }
+
+  - name: review_accept
+    command: graph-harness review accept {{ proposal_id }}
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: "accepted" }
+
+  - name: review_list_shows_accepted
+    command: graph-harness review list
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: "accepted" }

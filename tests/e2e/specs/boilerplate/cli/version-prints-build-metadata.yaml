@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://github.com/shivamstaq/gotit/raw/main/schema/spec.schema.json
+spec_version: 1
+name: cli-version-prints-build-metadata
+description: '`graph-harness version` prints the ldflags-injected version + commit + date triple.'
+tags: [boilerplate, cli, p0t04]
+order: 20
+repo:
+  helper: go-module-empty
+
+steps:
+  - name: version_output
+    command: graph-harness version
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: regex, pattern: '^[A-Za-z0-9.+\-]+ \([A-Za-z0-9.+\-]+, [^)]+\)' }

@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://github.com/shivamstaq/gotit/raw/main/schema/spec.schema.json
+spec_version: 1
+name: tui-prints-workspace-status-snapshot
+description: 'Non-interactive `graph-harness tui` prints workspace + event-log + findings snapshot and exits 0; full bubbletea cockpit is P4.'
+tags: [boilerplate, surfaces, tui, p0t41]
+order: 60
+repo:
+  helper: go-module-empty
+
+setup:
+  - name: init
+    command: graph-harness init
+    assert:
+      - { type: exit_code, expected: 0 }
+
+steps:
+  - name: tui_snapshot
+    command: graph-harness tui
+    assert:
+      - { type: exit_code, expected: 0 }
+      - { type: contains, value: "Workspace:" }
+      - { type: contains, value: "Event log:" }
+      - { type: contains, value: "Findings:" }
